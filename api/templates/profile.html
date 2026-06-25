@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Profil Saya - ProManage{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="px-6 py-8 sm:p-10">
+      <h1 class="text-2xl font-bold text-gray-900 mb-8">Profil Saya</h1>
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+        <!-- Profile Picture Section -->
+        <div class="flex flex-col items-center gap-4">
+          <div class="relative group">
+            <div id="profile-image-container" class="w-32 h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex items-center justify-center">
+              <i id="default-avatar-icon" data-lucide="user" class="w-12 h-12 text-gray-400"></i>
+              <img id="profile-image" src="" alt="Profile" class="w-full h-full object-cover hidden">
+            </div>
+            <div class="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 cursor-pointer" onclick="document.getElementById('file-upload').click()">
+              <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+              <span class="text-xs text-white font-medium">Ubah Foto</span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <input type="file" id="file-upload" accept="image/*" class="hidden" onchange="handleFileUpload(event)">
+            <button onclick="document.getElementById('file-upload').click()" class="text-sm font-medium text-gray-600 hover:text-red-800 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-50 border border-gray-200">Unggah</button>
+            <button onclick="openCameraModal()" class="text-sm font-medium text-white bg-red-800 hover:bg-red-900 transition-colors px-3 py-1.5 rounded-lg shadow-sm">Kamera</button>
+          </div>
+        </div>
+        <!-- User Details Section -->
+        <div class="flex-1 w-full relative">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-gray-900 hidden sm:block">Informasi Pribadi</h2>
+            <button id="edit-profile-btn" onclick="toggleEditProfile()" class="text-sm font-medium text-red-800 hover:text-red-900 flex items-center gap-2 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 transition-colors ml-auto">
+              <i data-lucide="edit" class="w-4 h-4"></i> Edit Profil
+            </button>
+          </div>
+          <form id="profile-form" onsubmit="saveProfile(event)" class="space-y-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-1">Nama Lengkap</label>
+              <p id="profile-name" class="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Memuat...</p>
+              <input type="text" id="input-name" class="hidden w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-1">NIM</label>
+              <p id="profile-nim" class="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Memuat...</p>
+              <input type="text" id="input-nim" class="hidden w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500 text-gray-900" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-1">Email</label>
+              <p id="profile-email" class="text-lg font-semibold text-gray-900 border-b border-gray-100 pb-2">Memuat...</p>
+              <p id="email-help" class="text-xs text-gray-400 mt-1 hidden">Email tidak dapat diubah.</p>
+            </div>
+            <div id="edit-actions" class="hidden mt-8 flex gap-3 justify-end pt-4 border-t border-gray-100">
+              <button type="button" onclick="cancelEditProfile()" class="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Batal</button>
+              <button type="submit" id="save-profile-btn" class="px-5 py-2 text-sm font-medium text-white bg-red-800 rounded-lg hover:bg-red-900 transition-colors flex items-center gap-2 shadow-sm">
+                <i data-lucide="save" class="w-4 h-4"></i> Simpan
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Camera Modal -->
+<div id="camera-modal" class="fixed inset-0 z-[100] hidden">
+  <div class="absolute inset-0 bg-gray-900/75 backdrop-blur-sm" onclick="closeCameraModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <h3 class="text-lg font-semibold text-gray-900">Ambil Foto</h3>
+        <button onclick="closeCameraModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4 bg-black">
+        <video id="camera-stream" class="w-full rounded-lg bg-black object-cover aspect-square" autoplay playsinline></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-center border-t border-gray-100">
+        <button onclick="takeSnapshot()" class="w-16 h-16 rounded-full bg-red-800 hover:bg-red-900 border-4 border-white shadow-lg flex items-center justify-center transition-transform hover:scale-105">
+          <i data-lucide="camera" class="w-6 h-6 text-white"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="fixed inset-0 z-[110] hidden">
+  <div class="absolute inset-0 bg-gray-900/75 backdrop-blur-sm" onclick="closePreviewModal()"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md p-4">
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-xl font-black text-gray-900">Ubah Foto Profil</h3>
+        <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-8 space-y-6">
+        <div class="text-center">
+          <h4 class="font-black text-gray-900">Preview Foto Profil</h4>
+          <p class="text-xs text-gray-400">Periksa kembali sebelum mengunggah</p>
+        </div>
+        <div class="relative bg-gray-50 rounded-2xl overflow-hidden aspect-square flex items-center justify-center border-2 border-gray-100 shadow-inner">
+          <img id="preview-img" class="w-full h-full object-cover" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <button onclick="closePreviewModal()" class="py-4 border-2 rounded-2xl font-black text-gray-400 hover:bg-gray-50 transition-all uppercase tracking-wider text-sm">ULANGI</button>
+          <button id="confirm-upload-btn" onclick="confirmProfilePictureUpload()" class="py-4 bg-red-800 text-white rounded-2xl font-black shadow-lg shadow-red-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-wider text-sm">UNGGAH</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+{% load static %}
+<script src="{% static 'js/profile.js' %}"></script>
+{% endblock %}

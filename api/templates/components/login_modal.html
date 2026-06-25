@@ -1,0 +1,195 @@
+<div id="login-modal" class="hidden fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
+  <div class="modal-backdrop fixed inset-0" onclick="closeAuthModal()"></div>
+  <div class="relative pm-auth-dialog shadow-2xl z-10">
+    <div class="p-6">
+      <!-- Header row (Flutter AuthDialog) -->
+      <div class="flex items-start gap-3 mb-5">
+        <div class="w-[42px] h-[42px] pm-logo-box rounded-xl shrink-0">
+          <i data-lucide="folder" class="w-[22px] h-[22px] text-white"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-lg font-extrabold text-[#0F172A] leading-tight">ProManage</p>
+          <p class="text-[11px] text-[#64748B] mt-0.5">Platform Manajemen Proyek Mahasiswa</p>
+        </div>
+        <button type="button" onclick="closeAuthModal()" class="text-[#94A3B8] hover:text-slate-600 p-1 border-0 bg-transparent cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="pm-auth-tabs mb-6">
+        <button type="button" id="login-tab" onclick="switchAuthTab('login')" class="pm-auth-tab active">Login</button>
+        <button type="button" id="register-tab" onclick="switchAuthTab('register')" class="pm-auth-tab">Register</button>
+      </div>
+
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <h2 class="text-2xl font-extrabold text-[#0F172A]">Selamat Datang Kembali</h2>
+        <p class="text-sm text-[#64748B] mt-1.5 mb-5">Masuk untuk mengelola proyek Anda</p>
+        <div class="space-y-3.5">
+          <div class="pm-auth-field">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" required placeholder="email@example.com" />
+          </div>
+          <div class="pm-auth-field">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" required minlength="6" placeholder="••••••••" />
+          </div>
+        </div>
+        <button type="submit" id="login-submit-btn" class="w-full mt-6 pm-btn-primary pm-btn-primary-dark py-3.5 rounded-xl font-bold">
+          <span class="inline-flex items-center justify-center gap-2">
+            <i data-lucide="log-in" class="w-[18px] h-[18px]"></i> Login
+          </span>
+        </button>
+      </form>
+
+      <form id="register-form" class="hidden" onsubmit="handleRegister(event)">
+        <h2 class="text-2xl font-extrabold text-[#0F172A]">Buat Akun Baru</h2>
+        <p class="text-sm text-[#64748B] mt-1.5 mb-5">Daftarkan diri untuk mulai mengelola proyek</p>
+        <div class="space-y-3.5">
+          <div class="pm-auth-field">
+            <label for="register-name">Nama Lengkap</label>
+            <input type="text" id="register-name" required placeholder="John Doe" />
+          </div>
+          <div class="pm-auth-field">
+            <label for="register-nim">NIM</label>
+            <input type="text" id="register-nim" required placeholder="123456789" />
+          </div>
+          <div class="pm-auth-field">
+            <label for="register-email">Email</label>
+            <input type="email" id="register-email" required placeholder="email@example.com" />
+          </div>
+          <div class="pm-auth-field">
+            <label for="register-password">Password</label>
+            <input type="password" id="register-password" required minlength="6" placeholder="••••••••" />
+          </div>
+        </div>
+        <button type="submit" id="register-submit-btn" class="w-full mt-6 pm-btn-primary pm-btn-primary-dark py-3.5 rounded-xl font-bold">
+          <span class="inline-flex items-center justify-center gap-2">
+            <i data-lucide="user-plus" class="w-[18px] h-[18px]"></i> Register
+          </span>
+        </button>
+      </form>
+
+      <p class="text-center text-[13.5px] text-[#64748B] mt-5">
+        <span id="auth-switch-hint">Belum punya akun?</span>
+        <button type="button" id="auth-switch-btn" onclick="toggleAuthFromFooter()" class="text-[#7F1D1D] font-bold border-0 bg-transparent cursor-pointer ml-1">Daftar sekarang</button>
+      </p>
+    </div>
+  </div>
+</div>
+<script>if(typeof SCRIPT_PREFIX==='undefined'){var SCRIPT_PREFIX='{{ request.META.SCRIPT_NAME|default:"" }}';}</script>
+<script>
+  let authTabActive = "login";
+
+  function switchAuthTab(tab) {
+    authTabActive = tab;
+    const loginTab = document.getElementById("login-tab");
+    const registerTab = document.getElementById("register-tab");
+    const loginForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
+    const hint = document.getElementById("auth-switch-hint");
+    const btn = document.getElementById("auth-switch-btn");
+
+    if (tab === "login") {
+      loginTab.classList.add("active");
+      registerTab.classList.remove("active");
+      loginForm.classList.remove("hidden");
+      registerForm.classList.add("hidden");
+      hint.textContent = "Belum punya akun?";
+      btn.textContent = "Daftar sekarang";
+    } else {
+      registerTab.classList.add("active");
+      loginTab.classList.remove("active");
+      registerForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+      hint.textContent = "Sudah punya akun?";
+      btn.textContent = "Masuk di sini";
+    }
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  }
+
+  function toggleAuthFromFooter() {
+    switchAuthTab(authTabActive === "login" ? "register" : "login");
+  }
+
+  function openRegisterModal() {
+    document.getElementById("login-modal").classList.remove("hidden");
+    switchAuthTab("register");
+    if (typeof lucide !== "undefined") lucide.createIcons();
+  }
+
+  async function parseAuthResponse(response) {
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || data.detail || "Permintaan gagal. Coba lagi.");
+    }
+    return data;
+  }
+
+  function persistAuthSession(data) {
+    const token = data.access || data.token;
+    if (!token || !data.user) {
+      throw new Error("Respons autentikasi tidak lengkap.");
+    }
+    localStorage.setItem("access_token", token);
+    localStorage.setItem("refresh_token", data.refresh || token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
+
+  function finishAuthSuccess(message) {
+    showToast(message, "success");
+    closeAuthModal();
+    // Update header segera setelah login/register
+    if (typeof updateHeaderUI === "function") updateHeaderUI();
+    setTimeout(() => { window.location.href = SCRIPT_PREFIX + "/proyek/"; }, 600);
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById("login-email").value.trim().toLowerCase();
+    const password = document.getElementById("login-password").value;
+    const btn = document.getElementById("login-submit-btn");
+    btn.disabled = true;
+
+    try {
+      const response = await fetch(SCRIPT_PREFIX + "/api/auth/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await parseAuthResponse(response);
+      persistAuthSession(data);
+      finishAuthSuccess("Login berhasil!");
+    } catch (error) {
+      showToast(error.message || "Login gagal", "error");
+    } finally {
+      btn.disabled = false;
+      if (typeof lucide !== "undefined") lucide.createIcons();
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const nama = document.getElementById("register-name").value.trim();
+    const nim = document.getElementById("register-nim").value.trim();
+    const email = document.getElementById("register-email").value.trim().toLowerCase();
+    const password = document.getElementById("register-password").value;
+    const btn = document.getElementById("register-submit-btn");
+    btn.disabled = true;
+
+    try {
+      const response = await fetch(SCRIPT_PREFIX + "/api/auth/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nama, nim, email, password }),
+      });
+      const data = await parseAuthResponse(response);
+      persistAuthSession(data);
+      finishAuthSuccess("Registrasi berhasil!");
+    } catch (error) {
+      showToast(error.message || "Registrasi gagal", "error");
+    } finally {
+      btn.disabled = false;
+      if (typeof lucide !== "undefined") lucide.createIcons();
+    }
+  }
+</script>

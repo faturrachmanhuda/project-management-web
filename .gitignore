@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Media uploads
+media/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+staticfiles/
+*.log
+
+# Misc scripts (development helpers)
+fix*.py
+cleanup*.py
+check_*.py
+create_test*.py
+comprehensive_check.py
+extract_js.py
+final_check.py
+revert_all_changes.py
+test_*.py
+duplicate_const_fixes.json
+check_report.json

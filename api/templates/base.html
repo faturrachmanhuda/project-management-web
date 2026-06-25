@@ -1,0 +1,251 @@
+{% load static %}
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}ProManage - Aplikasi Manajemen Proyek Mahasiswa{% endblock %}
+    </title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📊</text></svg>">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js dimuat sekali di sini, jangan dimuat lagi di halaman lain -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+      body {
+          font-family: 'Inter', sans-serif;
+          background-color: #f8fafc; /* Very light slate for modern feel */
+          color: #0f172a;
+      }
+
+      .toast-container {
+          position: fixed;
+          top: 1.5rem;
+          right: 1.5rem;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 0.75rem;
+      }
+
+      .toast {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          border-radius: 1rem;
+          padding: 1rem 1.25rem;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+          animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          max-width: 400px;
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+      }
+
+      .toast-error { border-left: 4px solid #ef4444; }
+      .toast-info { border-left: 4px solid #3b82f6; }
+      .toast-success { border-left: 4px solid #22c55e; }
+
+      @keyframes slideIn {
+          from { transform: translateX(120%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+      }
+
+      .modal-backdrop {
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(8px);
+      }
+
+      {% block extra_css %}{% endblock %}
+    </style>
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/promanage-flutter.css' %}" />
+  </head>
+
+  <body class="pm-app">
+    <div id="toast-container" class="toast-container"></div>
+    {% include 'components/header.html' %}
+    <main>{% block content %}{% endblock %}</main>
+    {% block modals %}{% include 'components/login_modal.html' %}{% endblock %}
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>var SCRIPT_PREFIX = '{{ request.META.SCRIPT_NAME|default:"" }}';</script>
+<script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#B91C1C",
+              "pm-maroon": "#B91C1C",
+              "pm-maroon-dark": "#7F1D1D",
+              "pm-surface": "#F8FAFC",
+              "pm-surface-alt": "#F5F6FA",
+            },
+            maxWidth: { "pm": "1240px" },
+          },
+        },
+      };
+
+      function openRegisterModal() {
+        const modal = document.getElementById("login-modal");
+        if (modal) {
+          modal.classList.remove("hidden");
+          if (typeof switchAuthTab === "function") switchAuthTab("register");
+        }
+      }
+
+      function closeAuthModal() {
+        const modal = document.getElementById("login-modal");
+        if (modal) modal.classList.add("hidden");
+      }
+
+      // Global utility functions
+      function showToast(message, type = "info") {
+        const container = document.getElementById("toast-container");
+        const toast = document.createElement("div");
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+          <div class="flex-shrink-0">
+            <i data-lucide="${type === 'error' ? 'alert-circle' : type === 'success' ? 'check-circle' : 'info'}" class="w-5 h-5 ${type === 'error' ? 'text-red-500' : type === 'success' ? 'text-green-500' : 'text-blue-500'}"></i>
+          </div>
+          <div class="flex-1 text-sm font-medium text-gray-900">${message}</div>
+        `;
+        container.appendChild(toast);
+        lucide.createIcons();
+        setTimeout(() => {
+          toast.style.animation = "slideIn 0.3s reverse";
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+      }
+
+      function getToken() {
+        return localStorage.getItem("access_token");
+      }
+
+      function isAuthenticated() {
+        const token = getToken();
+        if (!token) return false;
+        // Cek expiry JWT dari payload (format: header.payload.signature)
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (payload.exp && Date.now() / 1000 > payload.exp) {
+            // Token sudah expired — bersihkan
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("user");
+            return false;
+          }
+        } catch (e) {
+          // Token tidak valid formatnya
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("user");
+          return false;
+        }
+        return true;
+      }
+
+      // Flag untuk mencegah multiple redirect serentak
+      let _redirectingToLogin = false;
+
+      function _handleUnauthenticated() {
+        if (_redirectingToLogin) return;
+        _redirectingToLogin = true;
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+        localStorage.removeItem("user");
+        if (typeof updateHeaderUI === "function") updateHeaderUI();
+        // Jika sudah di halaman utama, cukup buka modal login
+        const homePath = SCRIPT_PREFIX ? SCRIPT_PREFIX + "/" : "/";
+        if (window.location.pathname === homePath || window.location.pathname === SCRIPT_PREFIX) {
+          _redirectingToLogin = false;
+          openLoginModal();
+        } else {
+          // Redirect ke home dan buka login modal
+          window.location.href = SCRIPT_PREFIX + "/?login=1";
+        }
+      }
+
+      async function apiRequest(url, options = {}) {
+        const token = getToken();
+        const headers = {
+          "Content-Type": "application/json",
+          ...options.headers,
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        try {
+          const response = await fetch(`${SCRIPT_PREFIX}/api${url}`, {
+            ...options,
+            headers,
+          });
+          if (response.status === 401) {
+            _handleUnauthenticated();
+            return null;
+          }
+          // 204 No Content — operasi DELETE/PATCH tanpa body
+          if (response.status === 204) return true;
+
+          // Parse body dulu sebelum cek ok/not-ok
+          let data;
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            data = await response.json();
+          } else {
+            // Binary response (PDF/Excel) — kembalikan response mentah
+            return response;
+          }
+
+          if (!response.ok) {
+            const errMsg =
+              (typeof data === 'object' && data !== null)
+                ? (data.error || data.detail || (Array.isArray(data.non_field_errors) ? data.non_field_errors[0] : null) || "Request failed")
+                : "Request failed";
+            throw new Error(errMsg);
+          }
+
+          // DRF list endpoint: bisa berupa array langsung atau {results:[...], count:N}
+          if (Array.isArray(data)) return data;
+          if (data && Array.isArray(data.results)) return data.results;
+          return data;
+        } catch (error) {
+          if (error.message && error.message !== "Request failed") {
+            showToast(error.message, "error");
+          }
+          throw error;
+        }
+      }
+
+      function getCurrentUser() {
+        try { return JSON.parse(localStorage.getItem('user') || 'null'); } catch(e) { return null; }
+      }
+
+      function openLoginModal() {
+        const modal = document.getElementById("login-modal");
+        if (modal) {
+          modal.classList.remove("hidden");
+          if (typeof switchAuthTab === "function") switchAuthTab("login");
+          if (typeof lucide !== "undefined") lucide.createIcons();
+        }
+      }
+
+      function closeLoginModal() {
+        closeAuthModal();
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        if (typeof lucide !== "undefined") {
+          lucide.createIcons();
+        }
+      });
+    </script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

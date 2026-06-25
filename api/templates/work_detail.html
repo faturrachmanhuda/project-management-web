@@ -1,0 +1,420 @@
+{% extends 'base.html' %} {% block title %}Work Detail - ProManage{% endblock %}
+{% block content %}
+<div id="work-detail-page" class="min-h-screen bg-gray-50 pb-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center gap-3">
+        <button
+          onclick="history.back()"
+          class="text-gray-600 hover:text-gray-900"
+        >
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <h1 id="work-name" class="text-3xl font-bold text-gray-900">
+          Loading...
+        </h1>
+      </div>
+      <button
+        onclick="openEditWorkModal()"
+        class="inline-flex items-center gap-2 bg-white border border-gray-200 hover:border-red-800 text-gray-700 hover:text-red-800 px-4 py-2 rounded-lg font-bold transition-all shadow-sm"
+      >
+        <i data-lucide="edit-3" class="w-4 h-4"></i>Edit Pekerjaan
+      </button>
+    </div>
+    <div class="bg-white rounded-xl p-6 shadow-sm mb-6">
+      <div class="grid grid-cols-2 gap-6">
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Lokasi</p>
+          <p id="work-location" class="font-medium text-gray-900">-</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Tanggal Mulai</p>
+          <p id="work-start" class="font-medium text-gray-900">-</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Tanggal Selesai</p>
+          <p id="work-end" class="font-medium text-gray-900">-</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Pelaksana</p>
+          <p id="work-executor" class="font-medium text-gray-900">-</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-600 mb-1">Supervisor</p>
+          <p id="work-supervisor" class="font-medium text-gray-900">-</p>
+        </div>
+      </div>
+    </div>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Aktivitas</h2>
+      <button
+        onclick="openAddActivityModal()"
+        class="inline-flex items-center gap-2 bg-red-800 hover:bg-red-900 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+      >
+        <i data-lucide="plus" class="w-4 h-4"></i>Tambah Aktivitas
+      </button>
+    </div>
+    <div id="activities-list" class="space-y-4"></div>
+  </div>
+</div>
+{% endblock %} {% block modals %}
+{{ block.super }}
+<!-- Modal Tambah Aktivitas -->
+<div id="add-activity-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('add-activity-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+    >
+      <div class="px-8 py-6 border-b border-gray-100">
+        <h3 class="text-xl font-bold text-gray-900">Tambah Aktivitas</h3>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="handleActivitySubmit(event)">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1"
+            >Nama Aktivitas *</label
+          ><input
+            type="text"
+            id="new-activity-name"
+            required
+            class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+          />
+        </div>
+          <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Waktu</label
+            ><input
+              type="time"
+              id="new-activity-time"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="new-activity-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('add-activity-modal')"
+            class="flex-1 px-6 py-3 border rounded-lg font-bold"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-6 py-3 bg-red-800 text-white rounded-lg font-bold"
+          >
+            Tambah
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Pekerjaan -->
+<div id="edit-work-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('edit-work-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
+    >
+      <div class="px-8 py-6 border-b border-gray-100">
+        <h3 class="text-2xl font-bold text-gray-900">Edit Pekerjaan</h3>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="submitEditWork(event)">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Nama Pekerjaan *</label
+            ><input
+              type="text"
+              id="edit-work-name"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Deskripsi *</label
+            ><textarea
+              id="edit-work-description"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            ></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Tempat *</label
+            ><input
+              type="text"
+              id="edit-work-location"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Mulai</label
+            ><input
+              type="date"
+              id="edit-work-start"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Selesai</label
+            ><input
+              type="date"
+              id="edit-work-end"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="edit-work-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Supervisor</label
+            ><input
+              type="text"
+              id="edit-work-supervisor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('edit-work-modal')"
+            class="flex-1 px-6 py-3 border rounded-lg font-bold"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-6 py-3 bg-red-800 text-white rounded-lg font-bold"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Aktivitas -->
+<div id="edit-activity-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('edit-activity-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+    >
+      <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-xl font-bold text-gray-900">Edit Aktivitas</h3>
+        <button
+          type="button"
+          onclick="closeModal('edit-activity-modal')"
+          class="text-gray-400 hover:text-gray-600 transition-colors"
+        >
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="submitEditActivity(event)">
+        <input type="hidden" id="edit-activity-id" />
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1"
+            >Nama Aktivitas *</label
+          ><input
+            type="text"
+            id="edit-activity-name"
+            required
+            class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+          />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Waktu</label
+            ><input
+              type="time"
+              id="edit-activity-time"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="edit-activity-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1"
+            >Evaluasi</label
+          ><textarea
+            id="edit-activity-evaluation"
+            rows="2"
+            class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            placeholder="Catatan evaluasi..."
+          ></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1"
+            >Rencana Tambahan</label
+          ><textarea
+            id="edit-activity-plan"
+            rows="2"
+            class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            placeholder="Rencana tindak lanjut..."
+          ></textarea>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('edit-activity-modal')"
+            class="flex-1 px-6 py-3 border rounded-lg font-bold"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-6 py-3 bg-red-800 text-white rounded-lg font-bold"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Upload Bukti -->
+<div id="upload-file-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal('upload-file-modal')"></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div class="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
+      <div class="px-8 py-6 border-b border-gray-100 flex justify-between items-center">
+        <h3 class="text-xl font-black text-gray-900">Upload Bukti</h3>
+        <button onclick="closeModal('upload-file-modal')" class="text-gray-400 hover:text-gray-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-8">
+        <input type="hidden" id="upload-activity-id" />
+        <!-- Pilihan metode upload -->
+        <div id="wd-upload-selection" class="grid grid-cols-1 gap-4">
+          <button onclick="document.getElementById('wd-file-input').click()"
+            class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-red-800 hover:bg-red-50 transition-all group">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-red-100">
+              <i data-lucide="file-up" class="w-6 h-6 text-gray-500 group-hover:text-red-800"></i>
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-gray-900">Upload File</p>
+              <p class="text-xs text-gray-500">Gambar, PDF, Dokumen...</p>
+            </div>
+          </button>
+          <input type="file" id="wd-file-input" class="hidden" onchange="wdHandleFileSelect(this)" />
+          <button onclick="wdShowCamera()"
+            class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-red-800 hover:bg-red-50 transition-all group">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-red-100">
+              <i data-lucide="camera" class="w-6 h-6 text-gray-500 group-hover:text-red-800"></i>
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-gray-900">Ambil Foto</p>
+              <p class="text-xs text-gray-500">Gunakan kamera perangkat</p>
+            </div>
+          </button>
+        </div>
+        <!-- Kamera -->
+        <div id="wd-method-camera" class="hidden space-y-4">
+          <div class="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center">
+            <video id="wd-camera-preview" autoplay playsinline class="w-full h-full object-cover"></video>
+            <canvas id="wd-camera-canvas" class="hidden"></canvas>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="wdCapturePhoto()" class="py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center gap-2">
+              <i data-lucide="camera" class="w-5 h-5"></i> Ambil Foto
+            </button>
+            <button onclick="wdResetUpload()" class="py-3 border rounded-xl font-bold">Batal</button>
+          </div>
+        </div>
+        <!-- Preview -->
+        <div id="wd-method-preview" class="hidden space-y-6">
+          <div class="text-center">
+            <h4 class="font-black text-gray-900">Preview Bukti</h4>
+            <p class="text-xs text-gray-400">Periksa kembali sebelum mengunggah</p>
+          </div>
+          <div class="relative bg-gray-50 rounded-2xl overflow-hidden min-h-[200px] flex items-center justify-center border-2 border-gray-100">
+            <img id="wd-preview-img" class="hidden w-full h-full object-contain max-h-[300px]" />
+            <div id="wd-preview-file-info" class="hidden flex flex-col items-center gap-3 p-8">
+              <div class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400">
+                <i data-lucide="file-text" class="w-8 h-8"></i>
+              </div>
+              <p id="wd-preview-filename" class="font-bold text-gray-900 truncate max-w-xs text-center"></p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <button onclick="wdResetUpload()" class="py-4 border-2 rounded-2xl font-black text-gray-400 hover:bg-gray-50">ULANGI</button>
+            <button onclick="wdConfirmUpload()" class="py-4 bg-red-800 text-white rounded-2xl font-black shadow-lg hover:scale-[1.02] transition-all">UNGGAH</button>
+          </div>
+        </div>
+        <!-- Uploading -->
+        <div id="wd-uploading-state" class="hidden py-10 text-center">
+          <div class="w-16 h-16 border-4 border-gray-100 border-t-red-800 rounded-full animate-spin mx-auto mb-4"></div>
+          <p class="font-bold text-gray-900">Sedang Mengupload...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+
+<!-- Pass Django variables to JavaScript -->
+<script>
+  const WORK_ID = "{{ work_id }}";
+  console.log("Django passed WORK_ID:", WORK_ID);
+  console.log("Type of WORK_ID:", typeof WORK_ID);
+  
+  if (!WORK_ID || WORK_ID === "") {
+    console.error("WARNING: WORK_ID is empty!");
+  } else {
+    console.log("✅ WORK_ID set successfully:", WORK_ID);
+  }
+</script>
+
+{% load static %}
+<script src="{% static 'js/work_detail.js' %}"></script>
+{% endblock %}

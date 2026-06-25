@@ -1,0 +1,1000 @@
+{% extends 'base.html' %}
+{% block title %}Project Detail - ProManage{% endblock %}
+{% block extra_css %}
+<style>
+  .work-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .work-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
+  }
+
+  .activity-row:last-child {
+    border-bottom: none;
+  }
+
+  .status-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .photo-thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .photo-thumb:hover {
+    transform: scale(1.1);
+  }
+
+  /* Gantt chart wrapper agar canvas mengisi penuh */
+  #gantt-chart-wrapper canvas {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+  }
+</style>
+{% endblock %} {% block content %}
+<div id="project-detail-page" class="min-h-screen bg-gray-50 pb-20">
+  <!-- Header Section -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        <div class="flex items-center gap-4">
+          <a
+            href="{% url 'projects' %}"
+            class="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-red-800"
+          >
+            <i data-lucide="arrow-left" class="w-6 h-6"></i>
+          </a>
+          <div>
+            <h1
+              id="header-project-name"
+              class="text-2xl font-extrabold text-gray-900 tracking-tight"
+            >
+              Memuat Proyek...
+            </h1>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span
+                id="header-project-status"
+                class="status-badge px-2 py-0.5 rounded bg-green-100 text-green-800"
+                >AKTIF</span
+              >
+              <span class="text-gray-300">•</span>
+              <span
+                id="header-project-location"
+                class="text-sm text-gray-500 flex items-center gap-1"
+              >
+                <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                <span id="val-location">-</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Export Buttons -->
+          <div
+            class="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100"
+          >
+            <button
+              onclick="downloadPdf()"
+              class="p-2 text-red-800 hover:bg-red-100 rounded-lg transition-colors"
+              title="Export PDF"
+            >
+              <i data-lucide="file-text" class="w-5 h-5"></i>
+            </button>
+            <button
+              onclick="downloadExcel()"
+              class="p-2 text-green-800 hover:bg-green-100 rounded-lg transition-colors"
+              title="Export Excel"
+            >
+              <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <button
+            onclick="handleDeleteProject()"
+            class="p-2 text-gray-400 hover:text-red-600 transition-colors border border-gray-200 rounded-lg"
+            title="Hapus Proyek"
+          >
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+          </button>
+          <button
+            onclick="handleTutupProyek()"
+            id="btn-tutup-proyek"
+            class="px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded-lg transition-all border border-gray-200"
+            title="Tutup Proyek"
+          >
+            <i data-lucide="lock" class="w-4 h-4 inline mr-1"></i>Tutup Proyek
+          </button>
+          <button
+            onclick="handleEditProject()"
+            class="px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-100 rounded-lg transition-all border border-gray-200"
+          >
+            Edit Proyek
+          </button>
+          <button
+            onclick="openAddWorkModal()"
+            class="px-4 py-2 text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-lg transition-all shadow-sm"
+          >
+            Tambah Pekerjaan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <!-- Left Sidebar -->
+      <div class="lg:col-span-4 space-y-6">
+        <div
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
+        >
+          <div class="px-6 py-5 border-b border-gray-50 bg-gray-50/50">
+            <h3 class="font-bold text-gray-900 flex items-center gap-2">
+              <i data-lucide="info" class="w-4 h-4 text-red-800"></i> Informasi
+              Proyek
+            </h3>
+          </div>
+          <div class="p-6 space-y-6">
+            <div>
+              <p
+                class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2"
+              >
+                Deskripsi
+              </p>
+              <p
+                id="side-description"
+                class="text-gray-600 text-sm leading-relaxed"
+              >
+                -
+              </p>
+            </div>
+            <div class="grid grid-cols-2 gap-6 pt-2">
+              <div>
+                <p
+                  class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1"
+                >
+                  Mulai
+                </p>
+                <p id="side-start" class="font-bold text-gray-900 text-sm">-</p>
+              </div>
+              <div>
+                <p
+                  class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1"
+                >
+                  Selesai
+                </p>
+                <p id="side-end" class="font-bold text-gray-900 text-sm">-</p>
+              </div>
+            </div>
+            <div class="space-y-4 pt-2">
+              <div class="flex items-start gap-3">
+                <div
+                  class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0"
+                >
+                  <i data-lucide="users" class="w-4 h-4 text-red-800"></i>
+                </div>
+                <div>
+                  <p
+                    class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                  >
+                    Pelaksana
+                  </p>
+                  <p id="side-executor" class="font-bold text-gray-900 text-sm">
+                    -
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div
+                  class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0"
+                >
+                  <i data-lucide="user-check" class="w-4 h-4 text-blue-800"></i>
+                </div>
+                <div>
+                  <p
+                    class="text-xs font-bold text-gray-400 uppercase tracking-widest"
+                  >
+                    Supervisor
+                  </p>
+                  <p
+                    id="side-supervisor"
+                    class="font-bold text-gray-900 text-sm"
+                  >
+                    -
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Card -->
+        <div
+          class="bg-gradient-to-br from-red-800 to-red-950 rounded-2xl shadow-lg p-6 text-white"
+        >
+          <h4 class="font-bold mb-4 opacity-90">Progress Keseluruhan</h4>
+          <div class="flex items-end justify-between mb-2">
+            <span class="text-3xl font-black" id="overall-progress">0%</span
+            ><span class="text-sm opacity-70" id="completed-count"
+              >0/0 Selesai</span
+            >
+          </div>
+          <div class="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+            <div
+              id="progress-bar"
+              class="h-full bg-white transition-all duration-1000"
+              style="width: 0%"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="lg:col-span-8 space-y-6">
+        <!-- Gantt Chart Timeline Card -->
+        <div
+          id="gantt-card"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hidden"
+        >
+          <!-- Card Header -->
+          <div class="px-6 pt-5 pb-4 border-b border-gray-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="calendar-range" class="w-5 h-5 text-red-800"></i>
+              <h3 class="font-extrabold text-gray-900 tracking-tight">
+                Timeline Pekerjaan (Gantt Chart)
+              </h3>
+            </div>
+            <span class="text-[9px] bg-red-50 text-red-800 font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+              Visual Jadwal
+            </span>
+          </div>
+
+          <!-- Legenda -->
+          <div class="px-6 pt-4 flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-gray-200 border border-gray-300"></div>
+              <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Durasi Total</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-red-700"></div>
+              <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Progres &lt; 50%</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-yellow-400"></div>
+              <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Progres 50–99%</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 rounded-sm bg-green-600"></div>
+              <span class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Selesai 100%</span>
+            </div>
+          </div>
+
+          <!-- Chart Area — tinggi otomatis via JS -->
+          <div class="px-4 pt-2 pb-6 overflow-x-auto">
+            <div id="gantt-chart-wrapper" class="relative" style="min-height: 300px;">
+              <canvas id="ganttChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xl font-black text-gray-900 tracking-tight">
+            Daftar Pekerjaan
+          </h2>
+          <span
+            id="work-count"
+            class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-xs font-bold"
+            >0 Pekerjaan</span
+          >
+        </div>
+        <div id="works-container" class="space-y-6">
+          <div class="animate-pulse space-y-6">
+            <div class="bg-white h-48 rounded-2xl"></div>
+            <div class="bg-white h-48 rounded-2xl"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block modals %}
+{{ block.super }}
+<!-- Modal Tambah Pekerjaan -->
+<div id="add-work-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('add-work-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
+    >
+      <div
+        class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+      >
+        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <i data-lucide="briefcase" class="w-5 h-5 text-red-800"></i>
+          Tambah Pekerjaan Baru
+        </h3>
+        <button
+          type="button"
+          onclick="closeModal('add-work-modal')"
+          class="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
+        >
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="handleWorkSubmit(event)">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Nama Pekerjaan *</label
+            ><input
+              type="text"
+              id="new-work-name"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all focus:ring-2 focus:ring-red-800"
+            />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Deskripsi *</label
+            ><textarea
+              id="new-work-description"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all focus:ring-2 focus:ring-red-800"
+            ></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Tempat *</label
+            ><input
+              type="text"
+              id="new-work-location"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Mulai</label
+            ><input
+              type="date"
+              id="new-work-start"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Selesai</label
+            ><input
+              type="date"
+              id="new-work-end"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="new-work-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Supervisor</label
+            ><input
+              type="text"
+              id="new-work-supervisor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('add-work-modal')"
+            class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-4 py-2.5 bg-red-800 text-white rounded-lg font-medium hover:bg-red-900 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Pekerjaan -->
+<div id="edit-work-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('edit-work-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
+    >
+      <div
+        class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"
+      >
+        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <i data-lucide="edit-3" class="w-5 h-5 text-red-800"></i>
+          Edit Pekerjaan
+        </h3>
+        <button
+          type="button"
+          onclick="closeModal('edit-work-modal')"
+          class="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
+        >
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="submitEditWork(event)">
+        <input type="hidden" id="edit-work-id" />
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Nama Pekerjaan *</label
+            ><input
+              type="text"
+              id="edit-work-name"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all focus:ring-2 focus:ring-red-800"
+            />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Deskripsi *</label
+            ><textarea
+              id="edit-work-description"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all focus:ring-2 focus:ring-red-800"
+            ></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Tempat *</label
+            ><input
+              type="text"
+              id="edit-work-location"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Mulai</label
+            ><input
+              type="date"
+              id="edit-work-start"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Selesai</label
+            ><input
+              type="date"
+              id="edit-work-end"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="edit-work-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Supervisor</label
+            ><input
+              type="text"
+              id="edit-work-supervisor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-800 focus:border-transparent text-sm transition-all"
+            />
+          </div>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('edit-work-modal')"
+            class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-4 py-2.5 bg-red-800 text-white rounded-lg font-medium hover:bg-red-900 transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            Simpan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- Activity modals removed: activities are now auto-fed from external modules (IE, IC, Implementation) -->
+
+
+<!-- Modal Upload File -->
+<!-- Modal Upload File -->
+<div id="upload-file-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('upload-file-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+    >
+      <!-- Header -->
+      <div
+        class="px-8 py-6 border-b border-gray-100 flex justify-between items-center"
+      >
+        <h3 class="text-xl font-black text-gray-900">Upload Bukti</h3>
+        <button
+          onclick="closeModal('upload-file-modal')"
+          class="text-gray-400 hover:text-gray-600"
+        >
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-8">
+        <input type="hidden" id="upload-activity-id" />
+
+        <!-- Selection Screen -->
+        <div id="upload-selection" class="grid grid-cols-1 gap-4">
+          <button
+            onclick="document.getElementById('file-input').click()"
+            class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-red-800 hover:bg-red-50 transition-all group"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-red-100"
+            >
+              <i
+                data-lucide="file-up"
+                class="w-6 h-6 text-gray-500 group-hover:text-red-800"
+              ></i>
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-gray-900">Pilih File</p>
+              <p class="text-xs text-gray-500">Gambar, PDF, Dokumen...</p>
+            </div>
+          </button>
+          <input
+            type="file"
+            id="file-input"
+            class="hidden"
+            onchange="handleFileSelect(this)"
+          />
+
+          <button
+            onclick="showUploadMethod('camera')"
+            class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-red-800 hover:bg-red-50 transition-all group"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-red-100"
+            >
+              <i
+                data-lucide="camera"
+                class="w-6 h-6 text-gray-500 group-hover:text-red-800"
+              ></i>
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-gray-900">Ambil Foto / Video</p>
+              <p class="text-xs text-gray-500">Gunakan kamera perangkat</p>
+            </div>
+          </button>
+
+          <button
+            onclick="showUploadMethod('voice')"
+            class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-red-800 hover:bg-red-50 transition-all group"
+          >
+            <div
+              class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-red-100"
+            >
+              <i
+                data-lucide="mic"
+                class="w-6 h-6 text-gray-500 group-hover:text-red-800"
+              ></i>
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-gray-900">Rekam Suara</p>
+              <p class="text-xs text-gray-500">Voice note singkat</p>
+            </div>
+          </button>
+        </div>
+
+        <!-- File Upload Method -->
+        <div id="method-file" class="hidden">
+          <div
+            class="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-red-800 transition-colors cursor-pointer"
+            onclick="document.getElementById('file-input').click()"
+          >
+            <i
+              data-lucide="upload-cloud"
+              class="w-12 h-12 text-gray-300 mx-auto mb-4"
+            ></i>
+            <p class="text-sm text-gray-600 font-bold">Klik untuk pilih file</p>
+            <p class="text-[10px] text-gray-400 mt-2 leading-relaxed">
+              Maksimal 5MB • Total maks 5 file
+            </p>
+            <input
+              type="file"
+              id="file-input"
+              class="hidden"
+              onchange="handleFileUpload(this)"
+            />
+          </div>
+        </div>
+
+        <!-- Camera Method -->
+        <div id="method-camera" class="hidden space-y-4">
+          <div
+            class="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center"
+          >
+            <video
+              id="camera-preview"
+              autoplay
+              playsinline
+              class="w-full h-full object-cover"
+            ></video>
+            <canvas id="camera-canvas" class="hidden"></canvas>
+
+            <!-- Video Recording Overlay -->
+            <div
+              id="video-recording-indicator"
+              class="hidden absolute top-4 left-4 flex items-center gap-2 bg-black/50 px-3 py-1 rounded-full border border-white/20"
+            >
+              <div class="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
+              <span id="video-timer" class="text-white text-xs font-bold"
+                >00:00</span
+              >
+            </div>
+
+            <div
+              id="camera-loading"
+              class="absolute inset-0 flex items-center justify-center bg-gray-900/50"
+            >
+              <i
+                data-lucide="loader"
+                class="w-8 h-8 text-white animate-spin"
+              ></i>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              onclick="capturePhoto()"
+              class="py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+            >
+              <i data-lucide="camera" class="w-5 h-5"></i> Ambil Foto
+            </button>
+            <button
+              id="video-record-btn"
+              onclick="toggleVideoRecording()"
+              class="py-3 bg-gray-900 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+            >
+              <i data-lucide="video" class="w-5 h-5"></i> Rekam Video
+            </button>
+            <button
+              onclick="showUploadMethod('selection')"
+              class="col-span-2 py-3 border rounded-xl font-bold"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice Method -->
+        <div id="method-voice" class="hidden space-y-4">
+          <div
+            class="bg-gray-50 rounded-2xl p-10 flex flex-col items-center justify-center border-2 border-gray-100"
+          >
+            <div
+              id="voice-animation"
+              class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 transition-all duration-300"
+            >
+              <i
+                data-lucide="mic"
+                id="voice-icon"
+                class="w-8 h-8 text-red-800"
+              ></i>
+            </div>
+            <p id="voice-timer" class="text-3xl font-black text-gray-900 mb-2">
+              00:00
+            </p>
+            <p
+              id="voice-status"
+              class="text-xs text-gray-500 font-bold uppercase tracking-widest"
+            >
+              Siap Merekam
+            </p>
+          </div>
+          <div class="flex gap-3">
+            <button
+              id="voice-cancel-btn"
+              onclick="showUploadMethod('selection')"
+              class="flex-1 py-3 border rounded-xl font-bold"
+            >
+              Batal
+            </button>
+            <button
+              id="voice-action-btn"
+              onclick="toggleVoiceRecording()"
+              class="flex-1 py-3 bg-red-800 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+            >
+              <i data-lucide="play" class="w-5 h-5"></i> Mulai Rekam
+            </button>
+          </div>
+        </div>
+
+        <!-- Uploading State -->
+        <div id="uploading-state" class="hidden py-10 text-center">
+          <div
+            class="w-16 h-16 border-4 border-gray-100 border-t-red-800 rounded-full animate-spin mx-auto mb-4"
+          ></div>
+          <p class="font-bold text-gray-900">Sedang Mengupload...</p>
+          <p class="text-xs text-gray-500 mt-1">Harap tunggu sebentar</p>
+        </div>
+
+        <!-- Preview Method -->
+        <div id="method-preview" class="hidden space-y-6">
+          <div class="text-center">
+            <h4 class="font-black text-gray-900">Preview Bukti</h4>
+            <p class="text-xs text-gray-400">
+              Periksa kembali sebelum mengunggah
+            </p>
+          </div>
+
+          <div
+            class="relative bg-gray-50 rounded-2xl overflow-hidden min-h-[200px] flex items-center justify-center border-2 border-gray-100 shadow-inner"
+          >
+            <img
+              id="preview-img"
+              class="hidden w-full h-full object-contain max-h-[300px]"
+            />
+            <video
+              id="preview-video"
+              controls
+              class="hidden w-full max-h-[300px] bg-black"
+            ></video>
+            <div
+              id="preview-audio-container"
+              class="hidden w-full p-8 flex flex-col items-center gap-4"
+            >
+              <div
+                class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-red-800 animate-pulse"
+              >
+                <i data-lucide="volume-2" class="w-8 h-8"></i>
+              </div>
+              <audio id="preview-audio" controls class="w-full"></audio>
+            </div>
+            <div
+              id="preview-file-info"
+              class="hidden flex flex-col items-center gap-3 p-8"
+            >
+              <div
+                class="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-gray-400"
+              >
+                <i data-lucide="file-text" class="w-8 h-8"></i>
+              </div>
+              <p
+                id="preview-filename"
+                class="font-bold text-gray-900 truncate max-w-xs text-center"
+              ></p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <button
+              onclick="cancelPreview()"
+              class="py-4 border-2 rounded-2xl font-black text-gray-400 hover:bg-gray-50 transition-all"
+            >
+              ULANGI
+            </button>
+            <button
+              onclick="confirmUpload()"
+              class="py-4 bg-red-800 text-white rounded-2xl font-black shadow-lg shadow-red-900/20 hover:scale-[1.02] transition-all"
+            >
+              UNGGAH
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="method-footer"
+          class="hidden mt-6 pt-6 border-t border-gray-50"
+        >
+          <button
+            onclick="showUploadMethod('selection')"
+            class="text-sm font-bold text-gray-500 hover:text-red-800 flex items-center gap-2"
+          >
+            <i data-lucide="chevron-left" class="w-4 h-4"></i> Kembali ke
+            pilihan
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Proyek -->
+<div id="edit-project-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div
+    class="modal-backdrop fixed inset-0 bg-black/50 backdrop-blur-sm"
+    onclick="closeModal('edit-project-modal')"
+  ></div>
+  <div class="flex min-h-screen items-center justify-center p-4">
+    <div
+      class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden"
+    >
+      <div class="px-8 py-6 border-b border-gray-100">
+        <h3 class="text-2xl font-bold text-gray-900">Edit Proyek</h3>
+      </div>
+      <form class="p-8 space-y-4" onsubmit="submitEditProject(event)">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Nama Proyek *</label
+            ><input
+              type="text"
+              id="edit-project-name"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            />
+          </div>
+          <div class="col-span-2">
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Deskripsi *</label
+            ><textarea
+              id="edit-project-description"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-red-800"
+            ></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Tempat *</label
+            ><input
+              type="text"
+              id="edit-project-location"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Status *</label
+            ><select
+              id="edit-project-status"
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            >
+              <option value="Aktif">Aktif</option>
+              <option value="Selesai">Selesai</option>
+              <option value="Tertunda">Tertunda</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2 pt-6">
+            <input
+              type="checkbox"
+              id="edit-project-closed"
+              class="w-4 h-4 text-red-800"
+            /><label
+              for="edit-project-closed"
+              class="text-sm font-bold text-gray-700"
+              >Tutup Proyek (Selesai Sepenuhnya)</label
+            >
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Mulai</label
+            ><input
+              type="date"
+              id="edit-project-start"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Selesai</label
+            ><input
+              type="date"
+              id="edit-project-end"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Pelaksana</label
+            ><input
+              type="text"
+              id="edit-project-executor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1"
+              >Supervisor</label
+            ><input
+              type="text"
+              id="edit-project-supervisor"
+              required
+              class="bg-white text-gray-900 w-full px-4 py-2 border rounded-lg outline-none"
+            />
+          </div>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button
+            type="button"
+            onclick="closeModal('edit-project-modal')"
+            class="flex-1 px-6 py-3 border rounded-lg font-bold"
+          >
+            Batal</button
+          ><button
+            type="submit"
+            class="flex-1 px-6 py-3 bg-red-800 text-white rounded-lg font-bold"
+          >
+            Simpan Perubahan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+
+<!-- Pass Django variables to JavaScript -->
+<script>
+  window.PROJECT_ID = "{{ project_id|escapejs }}";
+  console.log("Django passed PROJECT_ID:", window.PROJECT_ID);
+  console.log("Type of PROJECT_ID:", typeof window.PROJECT_ID);
+  
+  // Verify it's accessible
+  if (!window.PROJECT_ID || window.PROJECT_ID === "") {
+    console.error("WARNING: PROJECT_ID is empty!");
+  } else {
+    console.log("PROJECT_ID set successfully:", window.PROJECT_ID);
+  }
+</script>
+
+{% load static %}
+<script src="{% static 'js/project_detail.js' %}?v=20260611"></script>
+{% endblock %}

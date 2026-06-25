@@ -1,0 +1,424 @@
+{% extends 'base.html' %}
+{% block title %}Laporan Tugas - ProManage{% endblock %}
+{% block extra_css %}
+<style>
+  body { background:#f8fafc; }
+  .tr-wrap { max-width:1240px; margin:0 auto; padding:24px 16px 60px; }
+
+  /* ── Page header ── */
+  .tr-page-header {
+    background:linear-gradient(135deg,#fef2f2,#fffbfa);
+    border:1px solid #fecaca; border-radius:24px;
+    padding:22px 28px; margin-bottom:28px;
+    display:flex; flex-wrap:wrap; justify-content:space-between;
+    align-items:center; gap:16px;
+    box-shadow:0 4px 20px rgba(0,0,0,.05);
+  }
+  .tr-page-title { font-size:26px; font-weight:900; color:#0f172a; margin:0 0 4px; }
+  .tr-page-sub   { font-size:13px; color:#64748b; margin:0; max-width:480px; line-height:1.5; }
+  .btn-pdf {
+    display:inline-flex; align-items:center; gap:7px;
+    background:#b91c1c; color:#fff; font-weight:700; font-size:13px;
+    padding:10px 20px; border-radius:10px; border:none; cursor:pointer;
+    box-shadow:0 4px 14px rgba(185,28,28,.3); transition:background .15s,transform .1s;
+  }
+  .btn-pdf:hover { background:#991b1b; transform:translateY(-1px); }
+  .btn-back {
+    display:inline-flex; align-items:center; gap:7px;
+    background:#fff; color:#475569; font-weight:600; font-size:13px;
+    padding:10px 16px; border-radius:10px; border:1px solid #e2e8f0; cursor:pointer;
+    transition:background .15s; text-decoration:none;
+  }
+  .btn-back:hover { background:#f8fafc; }
+
+  /* ── Loading / empty ── */
+  .tr-loading { text-align:center; padding:40px; }
+  .tr-empty   { text-align:center; padding:60px 20px; color:#94a3b8; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ────────────────────────────────────────────
+     PROJECT CARD  (sesuai screenshot Flutter)
+  ──────────────────────────────────────────── */
+  .pcard {
+    background:#fff; border:1px solid #e8edf2; border-radius:20px;
+    overflow:hidden; margin-bottom:28px;
+    box-shadow:0 2px 12px rgba(0,0,0,.05);
+  }
+
+  /* — top section — */
+  .pcard-top {
+    padding:20px 24px 14px;
+    display:flex; align-items:flex-start;
+    justify-content:space-between; gap:14px;
+  }
+  .pcard-ico {
+    width:50px; height:50px; border-radius:14px; background:#b91c1c;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .pcard-name { font-size:19px; font-weight:800; color:#0f172a; margin:0 0 2px; }
+  .pcard-desc { font-size:13px; color:#64748b; margin:0; }
+  .pcard-badge {
+    padding:5px 14px; border-radius:999px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em; flex-shrink:0; margin-top:2px;
+  }
+  .pb-aktif    { background:#dcfce7; color:#166534; }
+  .pb-selesai  { background:#dbeafe; color:#1d4ed8; }
+  .pb-tertunda { background:#fef9c3; color:#854d0e; }
+
+  /* — meta chips — */
+  .pcard-meta {
+    padding:0 24px 16px;
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .meta-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    background:#f8fafc; border:1px solid #e8edf2; border-radius:8px;
+    padding:5px 10px; font-size:12px; font-weight:600; color:#475569;
+  }
+  .meta-chip i { flex-shrink:0; }
+
+  /* — divider — */
+  .pcard-divider { height:1px; background:#f1f5f9; margin:0 24px; }
+
+  /* — 3 stat cards — */
+  .pcard-stats {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    gap:14px; padding:16px 24px;
+  }
+  @media(max-width:500px){ .pcard-stats{ grid-template-columns:1fr 1fr; } }
+  .pstat {
+    background:linear-gradient(135deg,#fef2f2,#fff5f5);
+    border:1px solid #fecaca; border-radius:14px; padding:14px 16px;
+  }
+  .pstat-label { font-size:10px; font-weight:700; color:#b91c1c; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+  .pstat-val   { font-size:26px; font-weight:900; color:#0f172a; line-height:1; }
+
+  /* — collection section — */
+  .pcoll-header {
+    padding:16px 24px 12px;
+    border-top:1px solid #f1f5f9;
+    display:flex; align-items:center; gap:10px;
+  }
+  .pcoll-ico {
+    width:34px; height:34px; border-radius:9px; background:#fef2f2;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .pcoll-title { font-size:14px; font-weight:700; color:#0f172a; margin:0; }
+  .pcoll-sub   { font-size:12px; color:#94a3b8; margin:0; }
+
+  /* — 3 category columns — */
+  .pcoll-grid {
+    display:grid; grid-template-columns:repeat(3,1fr);
+    border-top:1px solid #f1f5f9;
+  }
+  @media(max-width:600px){ .pcoll-grid{ grid-template-columns:1fr; } }
+
+  .pcoll-col { padding:18px 20px; border-right:1px solid #f1f5f9; }
+  .pcoll-col:last-child { border-right:none; }
+
+  .pcoll-col-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .cat-ico { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; }
+  .ci-impl  { background:#2563eb; }
+  .ci-creat { background:#d97706; }
+  .ci-eng   { background:#16a34a; }
+
+  .cat-api-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .cab-impl  { background:#dbeafe; color:#1d4ed8; }
+  .cab-creat { background:#fef9c3; color:#854d0e; }
+  .cab-eng   { background:#dcfce7; color:#166534; }
+
+  .cat-name { font-size:16px; font-weight:800; color:#0f172a; margin:0 0 5px; }
+  .cat-desc { font-size:12px; color:#64748b; margin:0; line-height:1.5; }
+
+  .cat-status-box {
+    margin-top:14px; border-radius:12px; padding:14px;
+    border:1px solid;
+  }
+  .csb-impl  { background:#eff6ff; border-color:#bfdbfe; }
+  .csb-creat { background:#fffbeb; border-color:#fde68a; }
+  .csb-eng   { background:#f0fdf4; border-color:#bbf7d0; }
+
+  .csb-title { font-size:11px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
+  .csb-text  { font-size:12px; color:#64748b; margin:0 0 10px; line-height:1.5; }
+  .csb-sync  { display:flex; align-items:center; gap:6px; font-size:12px; color:#94a3b8; font-weight:500; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tr-wrap">
+
+  <!-- Page Header -->
+  <div class="tr-page-header">
+    <div>
+      <h1 class="tr-page-title">Laporan Tugas</h1>
+      <p class="tr-page-sub">Ringkasan aktivitas, pekerjaan, dan progres proyek dalam satu halaman khusus.</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="{% url 'projects' %}" class="btn-back">
+        <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Kembali
+      </a>
+      <button class="btn-pdf" onclick="downloadReportPdf()">
+        <i data-lucide="file-down" style="width:14px;height:14px;"></i> Cetak PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="tr-loading" class="tr-loading" style="display:none;">
+    <i data-lucide="loader-2" style="width:30px;height:30px;color:#b91c1c;animation:spin 1s linear infinite;display:block;margin:0 auto 8px;"></i>
+    <p style="color:#94a3b8;font-size:13px;">Memuat laporan...</p>
+  </div>
+
+  <!-- Project list -->
+  <div id="tr-list"></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+  const CATS = [
+    {
+      key:'implementation', name:'Implementation',
+      desc:'Hasil implementasi fitur, penerapan kode, atau bukti pengerjaan teknis.',
+      icoClass:'ci-impl', badgeClass:'cab-impl', boxClass:'csb-impl',
+      icon:'code-2', apiLabel:'Terhubung API',
+    },
+    {
+      key:'creation', name:'Creation',
+      desc:'Karya baru, dokumen perancangan, atau hasil pembuatan awal proyek.',
+      icoClass:'ci-creat', badgeClass:'cab-creat', boxClass:'csb-creat',
+      icon:'pen-tool', apiLabel:'Terhubung API',
+    },
+    {
+      key:'engineering', name:'Engineering',
+      desc:'Rekayasa sistem, analisis teknis, dan pengembangan lanjutan.',
+      icoClass:'ci-eng', badgeClass:'cab-eng', boxClass:'csb-eng',
+      icon:'settings-2', apiLabel:'Terhubung API',
+    },
+  ];
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // if (!isAuthenticated()) { window.location.href = SCRIPT_PREFIX + '/?login=1'; return; }
+    lucide.createIcons();
+    loadData();
+  });
+
+  async function loadData() {
+    show('tr-loading', true);
+    try {
+      const list = await apiRequest('/proyek/');
+      if (!list || !list.length) {
+        document.getElementById('tr-list').innerHTML = emptyHtml();
+        lucide.createIcons(); return;
+      }
+      const details = [];
+      for (const p of list) {
+        const d = await apiRequest(`/proyek/${p.id}/`);
+        if (d) details.push(d);
+      }
+      document.getElementById('tr-list').innerHTML = details.map(p => projectCardHtml(p)).join('');
+      lucide.createIcons();
+    } catch(e) {
+      console.error(e);
+      showToast('Gagal memuat laporan', 'error');
+    } finally {
+      show('tr-loading', false);
+    }
+  }
+
+  function projectCardHtml(p) {
+    const works   = p.pekerjaan || [];
+    const allActs = works.flatMap(w => w.aktivitas || []);
+    const total   = allActs.length;
+    const done    = allActs.filter(a => a.selesai).length;
+    const pct     = total ? Math.round(done / total * 100) : 0;
+
+    // Badge status
+    const isSelesai  = p.sudah_selesai || p.status === 'Selesai';
+    const isTertunda = p.status === 'Tertunda';
+    const badgeClass = isSelesai ? 'pb-selesai' : isTertunda ? 'pb-tertunda' : 'pb-aktif';
+    const badgeLabel = isSelesai ? 'Selesai'    : isTertunda ? 'Tertunda'    : 'Aktif';
+
+    // Meta chips
+    const chips = [
+      p.lokasi        ? `<span class="meta-chip"><i data-lucide="map-pin" style="width:12px;height:12px;"></i>${esc(p.lokasi)}</span>` : '',
+      (p.tanggal_mulai && p.tanggal_selesai)
+        ? `<span class="meta-chip"><i data-lucide="calendar" style="width:12px;height:12px;"></i>${esc(p.tanggal_mulai)} s/d ${esc(p.tanggal_selesai)}</span>` : '',
+      p.pelaksana     ? `<span class="meta-chip"><i data-lucide="users" style="width:12px;height:12px;"></i>${esc(p.pelaksana)}</span>` : '',
+      p.pengawas      ? `<span class="meta-chip"><i data-lucide="user-check" style="width:12px;height:12px;"></i>Pembimbing: ${esc(p.pengawas)}</span>` : '',
+    ].filter(Boolean).join('');
+
+    // Category columns
+    const catCols = CATS.map(cat => {
+      const catWorks = works.filter(w => w.kategori === cat.key);
+      const hasData  = catWorks.length > 0;
+      let statusHtml = '';
+      if (hasData) {
+        let statusText = 'Data tersedia';
+        let linksHtml = '';
+        let iconHtml = '<i data-lucide="check-circle" style="width:12px;height:12px;"></i>';
+        let statusColor = '#16a34a';
+
+        // Look for links in activity evaluasi fields (stored as JSON with {links:[...]})
+        let allLinks = [];
+        for (let w of catWorks) {
+            for (let act of (w.aktivitas || [])) {
+                try {
+                    if (act.evaluasi) {
+                        const parsed = JSON.parse(act.evaluasi);
+                        if (parsed && parsed.links && parsed.links.length > 0) {
+                            allLinks = allLinks.concat(parsed.links);
+                        }
+                    }
+                } catch (e) {}
+                // Also check rencana_tambahan for status info
+                if (act.rencana_tambahan && act.rencana_tambahan.includes('pending')) {
+                    statusText = act.rencana_tambahan;
+                    iconHtml = '<i data-lucide="clock" style="width:12px;height:12px;"></i>';
+                    statusColor = '#d97706';
+                }
+            }
+        }
+
+        if (allLinks.length > 0) {
+           // Deduplicate links by title
+           const seen = new Set();
+           const uniqueLinks = allLinks.filter(l => {
+               if (seen.has(l.title)) return false;
+               seen.add(l.title);
+               return true;
+           });
+           linksHtml = '<div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">' + 
+               uniqueLinks.map(l => `<a href="${l.url}" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid #cbd5e1;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;color:#334155;text-decoration:none;transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'"><i data-lucide="external-link" style="width:12px;height:12px;"></i>${l.title}</a>`).join('') + 
+               '</div>';
+        }
+           
+        statusHtml = `<p class="csb-text">Data untuk kategori ${cat.name.toLowerCase()} telah disinkronisasikan dari sistem mitra.</p>
+                      <div class="csb-sync" style="color:${statusColor};">
+                        ${iconHtml} ${statusText}
+                      </div>
+                      ${linksHtml}`;
+      } else {
+        statusHtml = `<p class="csb-text">Data untuk kategori ${cat.name.toLowerCase()} akan ditarik secara otomatis dari sistem mitra.</p>
+                      <div class="csb-sync">
+                        <i data-lucide="refresh-cw" style="width:12px;height:12px;animation:spin 2s linear infinite;"></i>
+                        Menunggu sinkronisasi...
+                      </div>`;
+      }
+
+      return `
+        <div class="pcoll-col">
+          <div class="pcoll-col-top">
+            <div class="cat-ico ${cat.icoClass}">
+              <i data-lucide="${cat.icon}" style="width:20px;height:20px;color:#fff;"></i>
+            </div>
+            <span class="cat-api-badge ${cat.badgeClass}">${cat.apiLabel}</span>
+          </div>
+          <p class="cat-name">${cat.name}</p>
+          <p class="cat-desc">${cat.desc}</p>
+          <div class="cat-status-box ${cat.boxClass}">
+            <div class="csb-title">Status Pengumpulan</div>
+            ${statusHtml}
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+    <div class="pcard">
+      <!-- Top: ikon + nama + badge -->
+      <div class="pcard-top">
+        <div style="display:flex;align-items:flex-start;gap:14px;flex:1;min-width:0;">
+          <div class="pcard-ico">
+            <i data-lucide="folder-open" style="width:24px;height:24px;color:#fff;"></i>
+          </div>
+          <div>
+            <p class="pcard-name">${esc(p.nama)}</p>
+            <p class="pcard-desc">${esc(p.deskripsi || '')}</p>
+          </div>
+        </div>
+        <span class="pcard-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+
+      <!-- Meta chips -->
+      <div class="pcard-meta">${chips}</div>
+
+      <div class="pcard-divider"></div>
+
+      <!-- 3 stat cards -->
+      <div class="pcard-stats">
+        <div class="pstat">
+          <div class="pstat-label">Pekerjaan</div>
+          <div class="pstat-val">${works.length}</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-label">Aktivitas</div>
+          <div class="pstat-val">${done}/${total}</div>
+        </div>
+        <div class="pstat">
+          <div class="pstat-label">Progres</div>
+          <div class="pstat-val">${pct}%</div>
+        </div>
+      </div>
+
+      <div class="pcard-divider"></div>
+
+      <!-- Tempat Pengumpulan Tugas header -->
+      <div class="pcoll-header">
+        <div class="pcoll-ico">
+          <i data-lucide="upload" style="width:16px;height:16px;color:#b91c1c;"></i>
+        </div>
+        <div>
+          <p class="pcoll-title">Tempat Pengumpulan Tugas</p>
+          <p class="pcoll-sub">Setiap proyek punya 3 slot kategori pengumpulan.</p>
+        </div>
+      </div>
+
+      <!-- 3 category columns -->
+      <div class="pcoll-grid">
+        ${catCols}
+      </div>
+    </div>`;
+  }
+
+  function emptyHtml() {
+    return `<div class="tr-empty">
+      <i data-lucide="inbox" style="width:48px;height:48px;color:#cbd5e1;display:block;margin:0 auto 12px;"></i>
+      <p style="font-size:15px;font-weight:600;color:#94a3b8;">Belum ada proyek</p>
+      <a href="{% url 'projects' %}" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;color:#b91c1c;font-weight:700;font-size:13px;text-decoration:none;">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Buat Proyek Baru
+      </a>
+    </div>`;
+  }
+
+  async function downloadReportPdf() {
+    try {
+      showToast('Mengunduh PDF...', 'info');
+      const r = await fetch(SCRIPT_PREFIX + '/api/reports/all/pdf/', {
+        headers: { 'Authorization': `Bearer ${getToken()}` }
+      });
+      if (!r.ok) throw new Error();
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `laporan-tugas-${new Date().toISOString().split('T')[0]}.pdf`;
+      a.click();
+      showToast('PDF berhasil diunduh!', 'success');
+    } catch {
+      showToast('Gagal mengunduh PDF', 'error');
+    }
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+  function show(id, v) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = v ? 'block' : 'none';
+  }
+</script>
+{% endblock %}
