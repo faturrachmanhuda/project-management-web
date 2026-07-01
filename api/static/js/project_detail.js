@@ -286,7 +286,12 @@ function renderGanttChart(works) {
 
   // Rentang sumbu X: 3 hari sebelum mulai tercepat hingga 3 hari setelah selesai terlama
   const allStarts = worksWithDates.map(w => toMs(w.tanggal_mulai));
-  const allEnds   = worksWithDates.map(w => toMs(w.tanggal_selesai));
+  const allEnds   = worksWithDates.map(w => {
+    const s = toMs(w.tanggal_mulai);
+    let e = toMs(w.tanggal_selesai);
+    if (s === e) e = s + 86400000;
+    return e;
+  });
   const xMin = Math.min(...allStarts) - 3 * 86400000;
   const xMax = Math.max(...allEnds)   + 3 * 86400000;
 
@@ -307,7 +312,12 @@ function renderGanttChart(works) {
     // Bar latar belakang abu-abu (total durasi)
     {
       label: 'Durasi Pekerjaan',
-      data: worksWithDates.map(w => [toMs(w.tanggal_mulai), toMs(w.tanggal_selesai)]),
+      data: worksWithDates.map(w => {
+        const start = toMs(w.tanggal_mulai);
+        let end   = toMs(w.tanggal_selesai);
+        if (start === end) end = start + 86400000; // Minimal 1 hari
+        return [start, end];
+      }),
       backgroundColor: 'rgba(229, 231, 235, 0.6)',
       borderColor: 'rgba(209, 213, 219, 0.8)',
       borderWidth: 1,
@@ -319,7 +329,8 @@ function renderGanttChart(works) {
       label: 'Progres',
       data: worksWithDates.map(w => {
         const start = toMs(w.tanggal_mulai);
-        const end   = toMs(w.tanggal_selesai);
+        let end   = toMs(w.tanggal_selesai);
+        if (start === end) end = start + 86400000; // Minimal 1 hari
         const pct   = (w.progres ?? 0) / 100;
         return [start, start + (end - start) * pct];
       }),

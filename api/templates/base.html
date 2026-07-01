@@ -16,6 +16,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     
+    <!-- Flatpickr for Date Inputs -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -246,6 +249,20 @@
         }
       });
     </script>
+    
+    <!-- Flatpickr Script and Initialization -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("Flatpickr initialized");
+        flatpickr('input[type="date"]', {
+          altInput: true,
+          altFormat: "F j, Y",
+          dateFormat: "Y-m-d",
+        });
+      });
+    </script>
+    
     {% block extra_js %}{% endblock %}
   </body>
 </html>

@@ -4,7 +4,7 @@ let pendingProfileImage = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!isAuthenticated()) {
-    window.location.href = '/';
+    window.location.href = (typeof SCRIPT_PREFIX !== 'undefined' ? SCRIPT_PREFIX : '') + '/';
     return;
   }
   lucide.createIcons();

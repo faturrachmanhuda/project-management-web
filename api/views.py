@@ -337,6 +337,53 @@ class ProyekViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(data=request.data, context={'request': request})
             if serializer.is_valid():
                 proyek = serializer.save()
+                
+                # --- [FIX] Proses nested pekerjaan dan aktivitas dari request.data ---
+                daftar_pekerjaan = request.data.get('pekerjaan', [])
+                if isinstance(daftar_pekerjaan, list):
+                    for pek_data in daftar_pekerjaan:
+                        pek_nama = pek_data.get('nama', '') or pek_data.get('pekerjaan', '')
+                        pek_deskripsi = pek_data.get('deskripsi', '')
+                        pek_lokasi = pek_data.get('lokasi', '')
+                        pek_mulai = pek_data.get('tanggal_mulai') or pek_data.get('start_date')
+                        pek_selesai = pek_data.get('tanggal_selesai') or pek_data.get('end_date')
+                        pek_pelaksana = pek_data.get('pelaksana', '')
+                        pek_pengawas = pek_data.get('pengawas', '')
+                        
+                        pekerjaan_obj = Pekerjaan.objects.create(
+                            proyek=proyek,
+                            nama=pek_nama,
+                            deskripsi=pek_deskripsi,
+                            lokasi=pek_lokasi,
+                            tanggal_mulai=pek_mulai if pek_mulai else None,
+                            tanggal_selesai=pek_selesai if pek_selesai else None,
+                            pelaksana=pek_pelaksana,
+                            pengawas=pek_pengawas
+                        )
+                        
+                        daftar_aktivitas = pek_data.get('aktivitas', [])
+                        if isinstance(daftar_aktivitas, list):
+                            for akt_data in daftar_aktivitas:
+                                akt_nama = akt_data.get('nama', '') or akt_data.get('nama_kegiatan', '') or akt_data.get('kegiatan', '')
+                                akt_pelaksana = akt_data.get('pelaksana', '')
+                                akt_evaluasi = akt_data.get('evaluasi', '')
+                                akt_rencana = akt_data.get('rencana_tambahan', '')
+                                akt_waktu = akt_data.get('waktu_pelaksanaan', '')
+                                akt_selesai_bool = akt_data.get('selesai', False)
+                                if isinstance(akt_selesai_bool, str):
+                                    akt_selesai_bool = akt_selesai_bool.lower() == 'true'
+                                
+                                Aktivitas.objects.create(
+                                    pekerjaan=pekerjaan_obj,
+                                    nama=akt_nama,
+                                    waktu_pelaksanaan=akt_waktu,
+                                    pelaksana=akt_pelaksana,
+                                    selesai=akt_selesai_bool,
+                                    evaluasi=akt_evaluasi,
+                                    rencana_tambahan=akt_rencana
+                                )
+                # --- END FIX ---
+
                 # Refresh dengan prefetch untuk response yang lengkap
                 proyek = Proyek.objects.prefetch_related('pekerjaan__aktivitas__bukti').get(id=proyek.id)
                 # Broadcast ke IE, IC, dan Implementation (non-blocking)
@@ -1128,6 +1175,11 @@ def sync_integration_status(request):
         import json as json_lib
         evaluasi_data = json_lib.dumps({'links': links}) if links else ''
         final_name = activity_name or f'Update dari {category}'
+
+        # Jika sync ini menandakan fase selesai (misal progress 100%), otomatis selesaikan semua aktivitas sebelumnya
+        is_completed = "telah selesai" in final_name.lower() or "telah dikembangkan" in final_name.lower() or "100%" in activity_detail
+        if is_completed:
+            Aktivitas.objects.filter(pekerjaan=pekerjaan, selesai=False).update(selesai=True)
 
         aktivitas, act_created = Aktivitas.objects.update_or_create(
             pekerjaan=pekerjaan,
